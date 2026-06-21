@@ -40,15 +40,21 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final class Store implements StoreInterface
 {
+    private readonly string $endpoint;
+
+    /**
+     * @param string $endpoint URL of the Supabase instance, with or without a trailing slash
+     */
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly string $url,
+        string $endpoint,
         private readonly string $apiKey,
         private readonly string $table = 'documents',
         private readonly string $vectorFieldName = 'embedding',
         private readonly int $vectorDimension = 1536,
         private readonly string $functionName = 'match_documents',
     ) {
+        $this->endpoint = rtrim($endpoint, '/');
     }
 
     public function add(VectorDocument|array $documents): void
@@ -80,7 +86,7 @@ final class Store implements StoreInterface
         foreach (array_chunk($rows, $chunkSize) as $chunk) {
             $response = $this->httpClient->request(
                 'POST',
-                \sprintf('%s/rest/v1/%s', $this->url, $this->table),
+                \sprintf('%s/rest/v1/%s', $this->endpoint, $this->table),
                 [
                     'headers' => $this->getHeaders() + ['Prefer' => 'resolution=merge-duplicates'],
                     'json' => $chunk,
@@ -112,7 +118,7 @@ final class Store implements StoreInterface
 
             $response = $this->httpClient->request(
                 'DELETE',
-                \sprintf('%s/rest/v1/%s', $this->url, $this->table),
+                \sprintf('%s/rest/v1/%s', $this->endpoint, $this->table),
                 [
                     'headers' => $this->getHeaders(),
                     'query' => [
@@ -155,7 +161,7 @@ final class Store implements StoreInterface
 
         $response = $this->httpClient->request(
             'POST',
-            \sprintf('%s/rest/v1/rpc/%s', $this->url, $this->functionName),
+            \sprintf('%s/rest/v1/rpc/%s', $this->endpoint, $this->functionName),
             [
                 'headers' => $this->getHeaders(),
                 'json' => [

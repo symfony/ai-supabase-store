@@ -310,6 +310,30 @@ class StoreTest extends TestCase
         $this->assertSame(1, $httpClient->getRequestsCount());
     }
 
+    public function testStoreNormalizesTrailingSlashOnEndpoint()
+    {
+        $requestedUrl = null;
+        $httpClient = new MockHttpClient(static function (string $method, string $url) use (&$requestedUrl): MockResponse {
+            $requestedUrl = $url;
+
+            return new MockResponse('', ['http_code' => 201]);
+        });
+
+        $store = new SupabaseStore(
+            $httpClient,
+            'https://test.supabase.co/',
+            'test-api-key',
+            'documents',
+            'embedding',
+            2,
+            'match_documents'
+        );
+
+        $store->add(new VectorDocument(Uuid::v4(), new Vector([0.1, 0.2]), new Metadata([])));
+
+        $this->assertSame('https://test.supabase.co/rest/v1/documents', $requestedUrl);
+    }
+
     private function createStore(MockHttpClient $httpClient, ?int $vectorDimension = 2): SupabaseStore
     {
         return new SupabaseStore(
